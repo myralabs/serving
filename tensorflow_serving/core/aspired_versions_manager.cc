@@ -181,13 +181,13 @@ void AspiredVersionsManager::SetAspiredVersions(
   std::vector<int64> next_aspired_versions;
   next_aspired_versions.reserve(versions.size());
   for (const auto& version : versions) {
-    if (servable_name != version.id().name) {
+    /*if (servable_name != version.id().name) {
       LOG(ERROR) << "Servable name: " << servable_name
                  << " doesn't match name in servable version: "
                  << version.id().name;
       DCHECK(false) << "See previous servable name mismatch error message.";
       return;
-    }
+    }*/
     next_aspired_versions.push_back(version.id().version);
   }
   std::sort(next_aspired_versions.begin(), next_aspired_versions.end());

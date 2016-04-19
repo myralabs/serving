@@ -290,8 +290,8 @@ void BasicManager::ManageServableInternal(
 
   const auto iter = BasicManager::FindHarnessInMap(servable.id());
   if (iter != managed_map_.end()) {
-    LOG(INFO) << "This servable is already being managed: "
-              << servable.id().DebugString();
+    //LOG(INFO) << "This servable is already being managed: "
+    //          << servable.id().DebugString();
     return;
   }
 

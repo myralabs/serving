@@ -1,7 +1,7 @@
 # Description: Tensorflow Serving hashmap servable.
 
 package(
-    default_visibility = ["//tensorflow_serving:internal"],
+    default_visibility = ["//visibility:public"],
     features = [
         "-layering_check",
         "-parse_headers",
