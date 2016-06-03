@@ -20,11 +20,11 @@ limitations under the License.
 #include <vector>
 
 #include "google/protobuf/any.pb.h"
-#include "google/protobuf/map.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/lib/core/errors.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/strings/strcat.h"
+#include "tensorflow/core/platform/protobuf.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/protobuf/meta_graph.pb.h"
 #include "tensorflow/core/protobuf/saver.pb.h"
@@ -60,8 +60,8 @@ Status GetSignatures(const tensorflow::MetaGraphDef& meta_graph_def,
   return Status::OK();
 }
 
-Status SetSignatures(tensorflow::MetaGraphDef* meta_graph_def,
-                     const Signatures& signatures) {
+Status SetSignatures(const Signatures& signatures,
+                     tensorflow::MetaGraphDef* meta_graph_def) {
   auto& collection_def = *(meta_graph_def->mutable_collection_def());
   auto* any_list = collection_def[kSignaturesKey].mutable_any_list();
   any_list->mutable_value()->Clear();

@@ -107,17 +107,22 @@ root@f07eec53fd95:/serving# bazel-bin/tensorflow_serving/example/inception_infer
 
 Query the server with [inception_client.py](https://github.com/tensorflow/serving/tree/master/tensorflow_serving/example/inception_client.py).
 The client sends an image specified by the command line parameter to the server
-over gRPC for classification. It then looks up the
-[ImageNet](http://www.image-net.org/) synset and metadata files and returns
-human readable descriptions of the categories.
+over gRPC for classification into human readable descriptions of the
+[ImageNet](http://www.image-net.org/) categories.
 
 ```shell
 root@f07eec53fd95:/serving# bazel-bin/tensorflow_serving/example/inception_client --server=localhost:9000 --image=/path/to/my_cat_image.jpg
-8.976576 : tabby, tabby cat
-8.725506 : Egyptian cat
-6.883981 : tiger cat
-2.659257 : lynx, catamount
-2.028728 : window screen
+scores: 9.41664886475
+scores: 8.14928436279
+scores: 7.6565990448
+scores: 3.85941624641
+scores: 2.82326698303
+classes: "tiger cat"
+classes: "cougar, puma, catamount, mountain lion, painter, panther, Felis concolor"
+classes: "Persian cat"
+classes: "leopard, Panthera pardus"
+classes: "Egyptian cat"
+
 root@f07eec53fd95:/serving# exit
 ```
 
@@ -256,11 +261,16 @@ We can now query the service at its external address from our local host.
 
 ```shell
 $ bazel-bin/tensorflow_serving/example/inception_client --server=146.148.88.232:9000 --image=/path/to/my_cat_image.jpg
-8.976576 : tabby, tabby cat
-8.725506 : Egyptian cat
-6.883981 : tiger cat
-2.659257 : lynx, catamount
-2.028728 : window screen
+scores: 9.41664886475
+scores: 8.14928436279
+scores: 7.6565990448
+scores: 3.85941624641
+scores: 2.82326698303
+classes: "tiger cat"
+classes: "cougar, puma, catamount, mountain lion, painter, panther, Felis concolor"
+classes: "Persian cat"
+classes: "leopard, Panthera pardus"
+classes: "Egyptian cat"
 ```
 
 You have successfully deployed Inception model serving as a service in

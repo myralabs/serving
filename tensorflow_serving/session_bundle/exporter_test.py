@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 """Tests for exporter.py."""
 
 import os.path
@@ -25,6 +24,7 @@ from tensorflow.core.protobuf import config_pb2
 from tensorflow.python.platform import flags
 from tensorflow.python.platform import gfile
 
+from tensorflow_serving.session_bundle import constants
 from tensorflow_serving.session_bundle import exporter
 from tensorflow_serving.session_bundle import gc
 from tensorflow_serving.session_bundle import manifest_pb2
@@ -72,13 +72,17 @@ class SaveRestoreShardedTest(tf.test.TestCase):
           "generic": exporter.generic_signature(named_tensor_bindings)
       }
 
-      def write_asset(path):
-        file_path = os.path.join(path, "file.txt")
-        with gfile.FastGFile(file_path, "w") as f:
-          f.write("your data here")
+      asset_filepath_orig = os.path.join(tf.test.get_temp_dir(), "hello42.txt")
+      asset_file = tf.constant(asset_filepath_orig, name="filename42")
+      tf.add_to_collection(tf.GraphKeys.ASSET_FILEPATHS, asset_file)
 
-      asset_file = tf.Variable("hello42.txt", name="filename42")
-      assets = {("hello42.txt", asset_file)}
+      with gfile.FastGFile(asset_filepath_orig, "w") as f:
+        f.write("your data here")
+      assets_collection = tf.get_collection(tf.GraphKeys.ASSET_FILEPATHS)
+
+      ignored_asset = os.path.join(tf.test.get_temp_dir(), "ignored.txt")
+      with gfile.FastGFile(ignored_asset, "w") as f:
+        f.write("additional data here")
 
       tf.initialize_all_variables().run()
 
@@ -94,8 +98,7 @@ class SaveRestoreShardedTest(tf.test.TestCase):
                   default_graph_signature=exporter.classification_signature(
                       input_tensor=v0),
                   named_graph_signatures=signatures,
-                  assets=assets,
-                  assets_callback=write_asset)
+                  assets_collection=assets_collection)
       export.export(export_path,
                     global_step_tensor,
                     sess,
@@ -108,14 +111,14 @@ class SaveRestoreShardedTest(tf.test.TestCase):
         target="",
         config=config_pb2.ConfigProto(device_count={"CPU": 2})) as sess:
       save = tf.train.import_meta_graph(
-          os.path.join(export_path, exporter.VERSION_FORMAT_SPECIFIER %
-                       global_step, exporter.META_GRAPH_DEF_FILENAME))
+          os.path.join(export_path, constants.VERSION_FORMAT_SPECIFIER %
+                       global_step, constants.META_GRAPH_DEF_FILENAME))
       self.assertIsNotNone(save)
       meta_graph_def = save.export_meta_graph()
       collection_def = meta_graph_def.collection_def
 
       # Validate custom graph_def.
-      graph_def_any = collection_def[exporter.GRAPH_KEY].any_list.value
+      graph_def_any = collection_def[constants.GRAPH_KEY].any_list.value
       self.assertEquals(len(graph_def_any), 1)
       graph_def = tf.GraphDef()
       graph_def_any[0].Unpack(graph_def)
@@ -125,12 +128,12 @@ class SaveRestoreShardedTest(tf.test.TestCase):
       self.assertProtoEquals(compare_def, graph_def)
 
       # Validate init_op.
-      init_ops = collection_def[exporter.INIT_OP_KEY].node_list.value
+      init_ops = collection_def[constants.INIT_OP_KEY].node_list.value
       self.assertEquals(len(init_ops), 1)
       self.assertEquals(init_ops[0], "init_op")
 
       # Validate signatures.
-      signatures_any = collection_def[exporter.SIGNATURES_KEY].any_list.value
+      signatures_any = collection_def[constants.SIGNATURES_KEY].any_list.value
       self.assertEquals(len(signatures_any), 1)
       signatures = manifest_pb2.Signatures()
       signatures_any[0].Unpack(signatures)
@@ -146,32 +149,38 @@ class SaveRestoreShardedTest(tf.test.TestCase):
       self.assertEquals(read_foo_signature.output.tensor_name, "v1:0")
 
       # Validate the assets.
-      assets_any = collection_def[exporter.ASSETS_KEY].any_list.value
+      assets_any = collection_def[constants.ASSETS_KEY].any_list.value
       self.assertEquals(len(assets_any), 1)
       asset = manifest_pb2.AssetFile()
       assets_any[0].Unpack(asset)
-      assets_path = os.path.join(
-          export_path, exporter.VERSION_FORMAT_SPECIFIER % global_step,
-          exporter.ASSETS_DIRECTORY, "file.txt")
+      assets_path = os.path.join(export_path,
+                                 constants.VERSION_FORMAT_SPECIFIER %
+                                 global_step, constants.ASSETS_DIRECTORY,
+                                 "hello42.txt")
       asset_contents = gfile.GFile(assets_path).read()
       self.assertEqual(asset_contents, "your data here")
       self.assertEquals("hello42.txt", asset.filename)
       self.assertEquals("filename42:0", asset.tensor_binding.tensor_name)
+      ignored_asset_path = os.path.join(export_path,
+                                        constants.VERSION_FORMAT_SPECIFIER %
+                                        global_step, constants.ASSETS_DIRECTORY,
+                                        "ignored.txt")
+      self.assertFalse(gfile.Exists(ignored_asset_path))
 
       # Validate graph restoration.
       if sharded:
         save.restore(sess,
                      os.path.join(
-                        export_path, exporter.VERSION_FORMAT_SPECIFIER %
-                        global_step, exporter.VARIABLES_FILENAME_PATTERN))
+                        export_path, constants.VERSION_FORMAT_SPECIFIER %
+                        global_step, constants.VARIABLES_FILENAME_PATTERN))
       else:
         save.restore(sess,
                      os.path.join(
-                        export_path, exporter.VERSION_FORMAT_SPECIFIER %
-                        global_step, exporter.VARIABLES_FILENAME))
+                        export_path, constants.VERSION_FORMAT_SPECIFIER %
+                        global_step, constants.VARIABLES_FILENAME))
       self.assertEqual(10, tf.get_collection("v")[0].eval())
       self.assertEqual(20, tf.get_collection("v")[1].eval())
-      tf.get_collection(exporter.INIT_OP_KEY)[0].run()
+      tf.get_collection(constants.INIT_OP_KEY)[0].run()
       self.assertEqual(30, tf.get_collection("v")[2].eval())
 
   def testDuplicateExportRaisesError(self):
