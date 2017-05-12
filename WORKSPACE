@@ -37,5 +37,5 @@ new_http_archive(
     build_file = "zlib.BUILD",
     sha256 = "879d73d8cd4d155f31c1f04838ecd567d34bebda780156f0e82a20721b3973d5",
     strip_prefix = "zlib-1.2.8",
-    url = "http://zlib.net/zlib128.zip",
+    url = "https://s3-us-west-2.amazonaws.com/ml-public/zlib128.zip",
 )
